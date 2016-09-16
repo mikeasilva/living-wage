@@ -1,0 +1,230 @@
+---
+title: "MIT Living Wage 2015 Exploration"
+author: "Mike Silva"
+date: "September 14, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+EXPLANATION OF THE DATA AND MOTIVATION FOR :
+
+### Data Manipulation 
+
+I pull in the data scrapped from the website and change the data types:  
+
+```{r read data, message=FALSE}
+df <- read.csv('2015 Living Wage.csv') 
+```
+
+Here's a sample of the data:  
+
+```{r sample, results='asis', message=FALSE, warning=FALSE}
+library(pander)
+library(dplyr)
+
+head(df) %>% pandoc.table(., style = "rmarkdown")
+```
+
+Now we will transform the data from wide to long:
+
+```{r wide to long, message=FALSE, warning=FALSE, results='asis'}
+library(tidyr)
+
+df <- df %>%
+  select(-Hourly.Wages, -year, -Location) %>% 
+  gather(., Type, Living.Wage, X1.Adult:X2.Adults.3.Children, factor_key=TRUE) 
+
+head(df) %>% pandoc.table(., style = "rmarkdown")
+```
+
+Now there is some cleanup that has to occur.  We need to remove the dollar signs and change the variable type to numeric.  We also need to rename the type
+```{r cleanup, results='asis'}
+dollar_to_numeric <- function(d){
+   as.numeric(sub('\\$','',as.character(d)))
+}
+
+
+df <- df %>%
+  #filter(nchar(as.character(FIPS.Code))>2) %>% # Drop the State Level Data
+  mutate(Living.Wage = dollar_to_numeric(Living.Wage))
+
+# Clean up the Levels
+new_types <- levels(df$Type) %>%
+  sub('X', '', .) %>%
+  sub('Working.','Working)', .) %>%
+  sub('\\.\\.',' (', .) %>%
+  gsub('[.]', ' ', .)
+
+levels(df$Type) <- new_types
+
+head(df) %>% pandoc.table(., style = "rmarkdown")
+```
+
+Now we need to add the count of working adults, non-working (in the labor market) adults and children to the dataset.  I think the easiest way is to use the Type column and change the levels:
+
+```{r dummy variables, results='asis'}
+working_adults = list('1'='1 Adult', '1'='1 Adult 1 Child', '1'='1 Adult 2 Children', '1'='1 Adult 3 Children', '1'='2 Adults (One Working)', '1'='2 Adults (One Working) 1 Child', '1'='2 Adults (One Working) 2 Children', '1'='2 Adults (One Working) 3 Children', '2'='2 Adults', '2'='2 Adults 1 Child', '2'='2 Adults 2 Children', '2'='2 Adults 3 Children')
+
+non_working_adults = list('0'='1 Adult', '0'='1 Adult 1 Child', '0'='1 Adult 2 Children', '0'='1 Adult 3 Children', '1'='2 Adults (One Working)', '1'='2 Adults (One Working) 1 Child', '1'='2 Adults (One Working) 2 Children', '1'='2 Adults (One Working) 3 Children', '0'='2 Adults', '2'='2 Adults 1 Child', '0'='2 Adults 2 Children', '0'='2 Adults 3 Children')
+
+children = list('0'='1 Adult', '1'='1 Adult 1 Child', '2'='1 Adult 2 Children', '3'='1 Adult 3 Children', '0'='2 Adults (One Working)', '1'='2 Adults (One Working) 1 Child', '2'='2 Adults (One Working) 2 Children', '3'='2 Adults (One Working) 3 Children', '0'='2 Adults', '1'='2 Adults 1 Child', '2'='2 Adults 2 Children', '3'='2 Adults 3 Children')
+
+df <- df %>%
+  mutate(Working.Adults = Type) %>%
+  mutate(Non.Working.Adults = Type) %>%
+  mutate(Children = Type)
+
+# Change the factor levels
+levels(df$Working.Adults) <- working_adults
+levels(df$Non.Working.Adults) <- non_working_adults
+levels(df$Children) <- children
+
+# Change factor to numeric values
+df <- df %>%
+  mutate(Working.Adults = as.numeric(as.character(Working.Adults))) %>%
+  mutate(Non.Working.Adults = as.numeric(as.character(Non.Working.Adults))) %>%
+  mutate(Children = as.numeric(as.character(Children)))
+
+head(df) %>% pandoc.table(., style = "rmarkdown")
+```
+
+Now we will calculate an annual salary figure from the living wage.  We will assume an 8 hour work day five days a week 52 weeks a year.  If there is more than one working adult we will assume they are paid the same wage:
+
+```{r calculate salary, results='asis'}
+df <- df %>%
+  mutate(Annual.Salary = Living.Wage * 8 * 5 * 52 * Working.Adults)
+
+head(df) %>% pandoc.table(., style = "rmarkdown")
+```
+
+Let's take a quick look at the data:
+
+```{r summarize salary, results='asis'}
+summary(df$Annual.Salary) %>% pandoc.table(., style = "rmarkdown")
+```
+
+The mean and the median are not that different.  There is a considerable range.  Let's take a look at the distribution of the estimates:
+
+## Distribution Plots
+
+We will begin with the looking at the distribution.  The mean is the red dashed line and the median the blue dashed line.
+
+```{r annual salary, echo=FALSE}
+library(ggplot2)
+#ggplot(df, aes(x=Annual.Salary)) + geom_density()
+ggplot(df, aes(x=Annual.Salary)) + geom_histogram(aes(y=..density..), bins=20, colour="black", fill="white") + geom_density(alpha=.2, fill="#FF6666") + geom_vline(aes(xintercept=mean(Annual.Salary, na.rm=T)), color="red", linetype="dashed", size=1) + geom_vline(aes(xintercept=median(Annual.Salary, na.rm=T)), color="blue", linetype="dashed", size=1)
+```
+
+### Cost of Children 
+
+There are cases presented in the data.  The cases are no children up to 3 children in the household.  
+
+```{r cost of children, echo=FALSE}
+df %>%
+  mutate(Children = factor(Children)) %>%
+ggplot(., aes(Children, Annual.Salary))+ geom_boxplot(aes(fill = Children))
+
+df %>%
+  mutate(Children = factor(Children)) %>%
+ggplot(., aes(x=Annual.Salary, fill=Children)) + geom_density(alpha=.3)
+```
+
+The data suggests the more children the more you will need.  The distributions are bimodal due to the change in the number of working adults.
+
+```{r children table, results='asis'}
+df %>%
+  group_by(Children) %>%
+  summarize(Min=min(Annual.Salary), Median=median(Annual.Salary), Mean=mean(Annual.Salary), Max=max(Annual.Salary)) %>%
+  pandoc.table(., style = "rmarkdown")
+```
+
+### Working Adults
+
+```{r working adults, echo=FALSE}
+df %>%
+  mutate(Working.Adults = factor(Working.Adults)) %>%
+  ggplot(., aes(Working.Adults, Annual.Salary)) + geom_boxplot(aes(fill = Working.Adults))
+
+df %>%
+  mutate(Working.Adults = factor(Working.Adults)) %>%
+ggplot(., aes(x=Annual.Salary, fill=Working.Adults)) + geom_density(alpha=.3)
+```
+
+You see the effect of the cost of childcare enter the picture in the preceeding figures.
+
+```{r working adults table, results='asis'}
+df %>%
+  group_by(Working.Adults) %>%
+  summarize(Min=min(Annual.Salary), Median=median(Annual.Salary), Mean=mean(Annual.Salary), Max=max(Annual.Salary)) %>%
+  pandoc.table(., style = "rmarkdown")
+```
+
+### Putting it Together
+
+Since we have examined this data and have shown that there is significant variation based on the number of children and the number of working adults let's examine the data with both of these dimensions:
+
+```{r type boxplot, echo=FALSE}
+ggplot(df, aes(Type, Annual.Salary)) + geom_boxplot(aes(fill = Type)) + theme(axis.text.x=element_blank(), axis.ticks.x=element_blank())
+```
+
+## Pulling it Apart
+
+Now let's examine the data using linear regression to tease out the impacts:
+
+```{r linear regression}
+model <- lm(Annual.Salary ~ Working.Adults + Non.Working.Adults + Children, df)
+summary(model)
+plot(model)
+```
+
+
+```{r random forest, message=FALSE}
+library(randomForest)
+set.seed(12345)
+rf.df <- df %>%
+  select(Annual.Salary, Working.Adults, Non.Working.Adults, Children)
+
+rf_model <- randomForest(Annual.Salary ~ ., data=rf.df, ntree=1000, keep.forest=FALSE, importance=TRUE)
+plot(rf_model, log="y")
+varImpPlot(rf_model)
+```
+
+## Geographic Vizualization
+
+I now want to look at the data geographically to see if any patterns emerge:
+
+```{r choropleth maps, message=FALSE, warning=FALSE}
+library(choroplethr)
+
+for(i in unique(df$Type)){
+  pic <- df %>%
+    filter(Type == i) %>%
+    mutate(region = FIPS.Code) %>%
+    mutate(value = Annual.Salary) %>%
+    select(region, value) %>%
+    county_choropleth(., title=i, num_colors=5)
+  print(pic)
+}
+```
+
+Let's try that again and break the data into 5 classes:
+
+```{r classes, warning=FALSE, message=FALSE}
+df$Annual.Salary.Class <- cut(df$Annual.Salary,5)
+for(i in unique(df$Type)){
+  pic <- df %>%
+    filter(Type == i) %>%
+    mutate(region = FIPS.Code) %>%
+    mutate(value = Annual.Salary.Class) %>%
+    select(region, value) %>%
+    county_choropleth(., title=i, num_colors=5)
+  print(pic)
+}
+```
+  
+```
