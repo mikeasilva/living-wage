@@ -24,7 +24,7 @@ for link in soup.findAll('a'):
     if 'locations' in link['href']:
         state_urls.append('http://livingwage.mit.edu'+link['href'])
 
-# Build the lsit of pages with data
+# Build the list of pages with data
 print('Scrapping state pages for links to pages with data')
 for state_url in state_urls:
     web_page = requests.get(state_url)
