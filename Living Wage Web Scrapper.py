@@ -23,8 +23,8 @@ print('Getting state pages')
 for link in soup.findAll('a'):
     if 'locations' in link['href']:
         state_urls.append('http://livingwage.mit.edu'+link['href'])
-   
-# Build the lsit of pages with data     
+
+# Build the lsit of pages with data
 print('Scrapping state pages for links to pages with data')
 for state_url in state_urls:
     web_page = requests.get(state_url)
@@ -32,7 +32,7 @@ for state_url in state_urls:
     for link in soup.findAll('a'):
         if(link.text in skip_list): continue
         pages_with_data.append('http://livingwage.mit.edu'+link['href'])
-       
+
 # Finally scrape the pages with data
 for page_url in pages_with_data:
     print('Scrapping '+page_url)
@@ -41,7 +41,7 @@ for page_url in pages_with_data:
     # Pull the header from the first table
     column_headers = [th.getText() for th in soup.findAll('tr', limit=2)[0].findAll('th')]
     # Pull the data from the first table
-    data_rows = soup.findAll('tr')[1:2] 
+    data_rows = soup.findAll('tr')[1:2]
     data = [[td.getText().strip() for td in data_rows[i].findAll('td')] for i in range(len(data_rows))]
     # Build a data frame to hold the data
     temp_df = pd.DataFrame(data, columns=column_headers)
@@ -58,7 +58,7 @@ for page_url in pages_with_data:
         living_wage_df = living_wage_df.append(temp_df)
     else:
         living_wage_df = temp_df
-        
+
 # Save it as an Excel file
 print('Writing Data')
 writer = pd.ExcelWriter(str(data_year)+' Living Wage.xlsx', engine='xlsxwriter')
