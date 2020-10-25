@@ -11,7 +11,7 @@ import pandas as pd
 import re
 
 # The year the data represent
-data_year = 2015
+data_year = 2020
 web_page = requests.get('http://livingwage.mit.edu/')
 soup = BeautifulSoup(web_page.content, 'lxml')
 state_urls = list()
