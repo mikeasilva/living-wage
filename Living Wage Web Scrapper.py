@@ -52,7 +52,7 @@ for page_url in pages_with_data:
     location = soup.select('.container h1')[0].text
     location = location.replace('Living Wage Calculation for ','')
     temp_df['Location']=location
-    temp_df['year'] = data_year
+    temp_df['Year'] = data_year
     temp_df['URL'] = page_url
     # Create or append to the final data frame
     if 'living_wage_df' in locals() or 'living_wage_df' in globals():
