@@ -12,7 +12,7 @@ import re
 
 # The year the data represent
 data_year = 2020
-web_page = requests.get('http://livingwage.mit.edu/')
+web_page = requests.get('https://livingwage.mit.edu/')
 soup = BeautifulSoup(web_page.content, 'lxml')
 state_urls = list()
 pages_with_data = list()
@@ -22,7 +22,7 @@ valid_page_list = ('/states', '/counties', '/metros')
 print('Getting state pages')
 for link in soup.findAll('a'):
     if 'locations' in link['href']:
-        state_urls.append('http://livingwage.mit.edu'+link['href'])
+        state_urls.append('https://livingwage.mit.edu'+link['href'])
 
 # Build the list of pages with data
 print('Scrapping state pages for links to pages with data')
@@ -31,7 +31,7 @@ for state_url in state_urls:
     soup = BeautifulSoup(web_page.content, 'lxml')
     for link in soup.findAll('a'):
         if(link['href'].startswith(valid_page_list)):
-            pages_with_data.append('http://livingwage.mit.edu'+link['href'])
+            pages_with_data.append('https://livingwage.mit.edu'+link['href'])
 
 # Finally scrape the pages with data
 for page_url in pages_with_data:
