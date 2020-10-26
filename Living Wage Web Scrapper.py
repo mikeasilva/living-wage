@@ -53,6 +53,7 @@ for page_url in pages_with_data:
     location = location.replace('Living Wage Calculation for ','')
     temp_df['Location']=location
     temp_df['year'] = data_year
+    temp_df['URL'] = page_url
     # Create or append to the final data frame
     if 'living_wage_df' in locals() or 'living_wage_df' in globals():
         living_wage_df = living_wage_df.append(temp_df)
