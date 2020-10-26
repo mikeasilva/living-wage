@@ -41,7 +41,7 @@ for page_url in pages_with_data:
     # Pull the header from the first table
     column_headers = [th.getText() for th in soup.findAll('tr', limit=2)[1].findAll('td')]
     # Pull the data from the first table
-    data_rows = soup.findAll('tr')[1:2]
+    data_rows = soup.findAll('tr')[2:3]
     data = [[td.getText().strip() for td in data_rows[i].findAll('td')] for i in range(len(data_rows))]
     # Build a data frame to hold the data
     temp_df = pd.DataFrame(data, columns=column_headers)
